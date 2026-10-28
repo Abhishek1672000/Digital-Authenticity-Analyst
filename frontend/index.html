@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Digital Authenticity Analyst</title>
+  <style>
+    /* ── Reset & Base ─────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:        #0f1117;
+      --surface:   #1a1d27;
+      --surface2:  #22263a;
+      --border:    #2e3250;
+      --accent:    #6c63ff;
+      --accent2:   #00c2ff;
+      --green:     #22c55e;
+      --yellow:    #eab308;
+      --red:       #ef4444;
+      --text:      #e2e8f0;
+      --muted:     #8892a4;
+      --radius:    14px;
+      --shadow:    0 4px 32px rgba(0,0,0,0.5);
+    }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── Header ───────────────────────────────────────────────────────────── */
+    header {
+      background: linear-gradient(135deg, #1a1d27 0%, #0f1117 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 20px 32px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      position: sticky; top: 0; z-index: 100;
+      backdrop-filter: blur(8px);
+    }
+    .logo { font-size: 28px; }
+    header h1 { font-size: 1.35rem; font-weight: 700; letter-spacing: -0.3px; }
+    header p  { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+    .badge {
+      margin-left: auto;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      color: #fff;
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 4px 12px;
+      border-radius: 99px;
+      letter-spacing: 0.5px;
+    }
+
+    /* ── Layout ───────────────────────────────────────────────────────────── */
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr 400px;
+      gap: 24px;
+      padding: 28px 32px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    @media (max-width: 960px) {
+      .layout { grid-template-columns: 1fr; }
+    }
+
+    /* ── Section heading ──────────────────────────────────────────────────── */
+    .section-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+
+    /* ── Upload Card ──────────────────────────────────────────────────────── */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 16px;
+    }
+    .card {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+    .card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, var(--card-color, var(--accent)) 0%, transparent 60%);
+      opacity: 0.07;
+      pointer-events: none;
+    }
+    .card:hover { border-color: var(--card-color, var(--accent)); transform: translateY(-2px); box-shadow: var(--shadow); }
+    .card.active { border-color: var(--card-color, var(--accent)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--card-color, var(--accent)) 20%, transparent); }
+
+    .card-icon { font-size: 2rem; margin-bottom: 10px; display: block; }
+    .card-title { font-size: 1rem; font-weight: 700; margin-bottom: 4px; }
+    .card-desc { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+
+    /* Drop zone */
+    .drop-zone {
+      margin-top: 14px;
+      border: 1.5px dashed var(--border);
+      border-radius: 10px;
+      padding: 18px 12px;
+      text-align: center;
+      font-size: 0.78rem;
+      color: var(--muted);
+      background: var(--surface2);
+      transition: border-color 0.2s, background 0.2s;
+      position: relative;
+      cursor: pointer;
+    }
+    .drop-zone.drag-over {
+      border-color: var(--card-color, var(--accent));
+      background: color-mix(in srgb, var(--card-color, var(--accent)) 10%, var(--surface2));
+      color: var(--text);
+    }
+    .drop-zone input[type="file"] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+    }
+    .drop-zone .dz-icon { font-size: 1.6rem; margin-bottom: 6px; display: block; }
+    .drop-zone .file-name {
+      margin-top: 8px;
+      font-size: 0.75rem;
+      color: var(--text);
+      font-weight: 600;
+      word-break: break-all;
+    }
+
+    /* Textarea */
+    .card textarea, .card input[type="text"], .card input[type="url"] {
+      width: 100%;
+      margin-top: 14px;
+      background: var(--surface2);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 0.82rem;
+      padding: 12px;
+      resize: vertical;
+      font-family: inherit;
+      line-height: 1.5;
+      transition: border-color 0.2s;
+      outline: none;
+    }
+    .card textarea:focus, .card input[type="text"]:focus, .card input[type="url"]:focus {
+      border-color: var(--card-color, var(--accent));
+    }
+    .card textarea { min-height: 100px; }
+
+    /* Context input (below cards) */
+    .context-row {
+      margin-top: 16px;
+    }
+    .context-row label { font-size: 0.8rem; color: var(--muted); display: block; margin-bottom: 6px; }
+    .context-row textarea {
+      width: 100%;
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 0.82rem;
+      padding: 12px;
+      min-height: 72px;
+      resize: vertical;
+      font-family: inherit;
+      transition: border-color 0.2s;
+      outline: none;
+    }
+    .context-row textarea:focus { border-color: var(--accent); }
+
+    /* ── Analyze Button ───────────────────────────────────────────────────── */
+    .analyze-btn {
+      margin-top: 20px;
+      width: 100%;
+      padding: 15px;
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      color: #fff;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    .analyze-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+    .analyze-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: none;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Results Panel ────────────────────────────────────────────────────── */
+    .results-panel {
+      position: sticky;
+      top: 88px;
+      height: calc(100vh - 112px);
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+
+    .result-placeholder {
+      background: var(--surface);
+      border: 1.5px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 48px 24px;
+      text-align: center;
+      color: var(--muted);
+    }
+    .result-placeholder .ph-icon { font-size: 3rem; margin-bottom: 16px; display: block; opacity: 0.5; }
+    .result-placeholder p { font-size: 0.85rem; line-height: 1.6; }
+
+    /* Verdict card */
+    .verdict-card {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      animation: fadeUp 0.3s ease;
+    }
+    @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:none; } }
+
+    .verdict-header {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      border-bottom: 1px solid var(--border);
+    }
+    .verdict-label {
+      font-size: 1.1rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .confidence-pill {
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 99px;
+      width: fit-content;
+    }
+    .conf-high    { background: #22c55e22; color: #22c55e; border: 1px solid #22c55e55; }
+    .conf-moderate{ background: #eab30822; color: #eab308; border: 1px solid #eab30855; }
+    .conf-low     { background: #ef444422; color: #ef4444; border: 1px solid #ef444455; }
+    .conf-indet   { background: #8892a422; color: #8892a4; border: 1px solid #8892a455; }
+
+    .bottom-line { font-size: 0.82rem; color: var(--text); line-height: 1.55; margin-top: 4px; }
+    .limitation  { font-size: 0.75rem; color: var(--muted); margin-top: 6px; display: flex; gap: 6px; align-items: flex-start; }
+
+    /* Score bar */
+    .score-bar-wrap { padding: 16px 20px; border-bottom: 1px solid var(--border); }
+    .score-bar-label { font-size: 0.72rem; color: var(--muted); margin-bottom: 8px; display: flex; justify-content: space-between; }
+    .score-bar { height: 8px; background: var(--border); border-radius: 99px; overflow: hidden; }
+    .score-fill { height: 100%; border-radius: 99px; transition: width 0.6s ease; }
+
+    /* Evidence table */
+    .evidence-section { padding: 16px 20px; border-bottom: 1px solid var(--border); }
+    .evidence-section h3 { font-size: 0.78rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 12px; }
+    .evidence-row {
+      background: var(--surface2);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 8px;
+      font-size: 0.78rem;
+      border-left: 3px solid var(--border);
+    }
+    .evidence-row.strong { border-left-color: var(--red); }
+    .evidence-row.moderate { border-left-color: var(--yellow); }
+    .evidence-row.weak { border-left-color: var(--muted); }
+    .ev-clue { font-weight: 600; margin-bottom: 4px; }
+    .ev-meta { color: var(--muted); margin-top: 3px; display: flex; gap: 8px; flex-wrap: wrap; }
+    .ev-tag { background: var(--border); border-radius: 4px; padding: 1px 6px; font-size: 0.7rem; }
+
+    /* Checks list */
+    .checks-section { padding: 16px 20px; }
+    .checks-section h3 { font-size: 0.78rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 10px; }
+    .check-item { font-size: 0.76rem; display: flex; gap: 8px; align-items: flex-start; margin-bottom: 6px; color: var(--muted); }
+    .check-item.done { color: var(--text); }
+    .check-dot { flex-shrink: 0; margin-top: 2px; }
+
+    /* Risk box */
+    .risk-box {
+      margin: 0 20px 16px;
+      background: #ef444411;
+      border: 1px solid #ef444433;
+      border-radius: 10px;
+      padding: 14px;
+      font-size: 0.78rem;
+      line-height: 1.55;
+    }
+    .risk-box h4 { color: var(--red); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 6px; }
+    .verify-box {
+      margin: 0 20px 20px;
+      background: #6c63ff11;
+      border: 1px solid #6c63ff33;
+      border-radius: 10px;
+      padding: 14px;
+      font-size: 0.78rem;
+      line-height: 1.55;
+    }
+    .verify-box h4 { color: var(--accent); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 6px; }
+
+    /* Error banner */
+    .error-banner {
+      background: #ef444422;
+      border: 1px solid #ef444455;
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      font-size: 0.82rem;
+      color: #fca5a5;
+    }
+
+    /* Color themes per card */
+    .card-img   { --card-color: #6c63ff; }
+    .card-vid   { --card-color: #f43f5e; }
+    .card-aud   { --card-color: #10b981; }
+    .card-doc   { --card-color: #f59e0b; }
+    .card-email { --card-color: #38bdf8; }
+    .card-social{ --card-color: #a78bfa; }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ──────────────────────────────────────────────────────────── -->
+<header>
+  <span class="logo">🔍</span>
+  <div>
+    <h1>Digital Authenticity Analyst</h1>
+    <p>AI Detection · Forensic Verification · OSINT Investigation</p>
+  </div>
+  <span class="badge">LIVE</span>
+</header>
+
+<!-- ── Main Layout ──────────────────────────────────────────────────────── -->
+<div class="layout">
+
+  <!-- Left: Submission Panels -->
+  <div>
+    <p class="section-title">📥 Choose what you want to verify</p>
+    <div class="cards-grid">
+
+      <!-- IMAGE -->
+      <div class="card card-img" id="card-img" onclick="activateCard('img')">
+        <span class="card-icon">🖼️</span>
+        <div class="card-title">Image</div>
+        <div class="card-desc">Check photos for AI generation, manipulation, ELA artifacts, or false context.</div>
+        <div class="drop-zone" id="dz-img" ondragover="onDrag(event,'img')" ondragleave="offDrag('img')" ondrop="onDrop(event,'img')">
+          <input type="file" id="file-img" accept="image/*" onchange="onFile('img')" />
+          <span class="dz-icon">⬆️</span>
+          Drag & drop or <strong>click to upload</strong><br/>
+          <small>JPG, PNG, GIF, WEBP — max 50MB</small>
+          <div class="file-name" id="name-img"></div>
+        </div>
+      </div>
+
+      <!-- VIDEO -->
+      <div class="card card-vid" id="card-vid" onclick="activateCard('vid')">
+        <span class="card-icon">🎬</span>
+        <div class="card-title">Video</div>
+        <div class="card-desc">Detect deepfakes, frame inconsistencies, compositing, or synthetic content.</div>
+        <div class="drop-zone" id="dz-vid" ondragover="onDrag(event,'vid')" ondragleave="offDrag('vid')" ondrop="onDrop(event,'vid')">
+          <input type="file" id="file-vid" accept="video/*" onchange="onFile('vid')" />
+          <span class="dz-icon">⬆️</span>
+          Drag & drop or <strong>click to upload</strong><br/>
+          <small>MP4, MOV, AVI, WEBM — max 50MB</small>
+          <div class="file-name" id="name-vid"></div>
+        </div>
+      </div>
+
+      <!-- AUDIO -->
+      <div class="card card-aud" id="card-aud" onclick="activateCard('aud')">
+        <span class="card-icon">🎙️</span>
+        <div class="card-title">Audio / Voice Note</div>
+        <div class="card-desc">Detect voice cloning, TTS synthesis, audio splicing, and speech forgeries.</div>
+        <div class="drop-zone" id="dz-aud" ondragover="onDrag(event,'aud')" ondragleave="offDrag('aud')" ondrop="onDrop(event,'aud')">
+          <input type="file" id="file-aud" accept="audio/*" onchange="onFile('aud')" />
+          <span class="dz-icon">⬆️</span>
+          Drag & drop or <strong>click to upload</strong><br/>
+          <small>MP3, WAV, OGG, FLAC — max 50MB</small>
+          <div class="file-name" id="name-aud"></div>
+        </div>
+      </div>
+
+      <!-- DOCUMENT -->
+      <div class="card card-doc" id="card-doc" onclick="activateCard('doc')">
+        <span class="card-icon">📄</span>
+        <div class="card-title">Document / Invoice / PDF</div>
+        <div class="card-desc">Inspect revision history, font tampering, digital signatures, and hidden layers.</div>
+        <div class="drop-zone" id="dz-doc" ondragover="onDrag(event,'doc')" ondragleave="offDrag('doc')" ondrop="onDrop(event,'doc')">
+          <input type="file" id="file-doc" accept=".pdf,.doc,.docx" onchange="onFile('doc')" />
+          <span class="dz-icon">⬆️</span>
+          Drag & drop or <strong>click to upload</strong><br/>
+          <small>PDF, DOC, DOCX — max 50MB</small>
+          <div class="file-name" id="name-doc"></div>
+        </div>
+      </div>
+
+      <!-- EMAIL / TEXT -->
+      <div class="card card-email" id="card-email" onclick="activateCard('email')">
+        <span class="card-icon">📧</span>
+        <div class="card-title">Email / Text / Article</div>
+        <div class="card-desc">Check email headers (SPF/DKIM/DMARC), verify factual claims, detect scam patterns.</div>
+        <textarea id="text-email" placeholder="Paste raw email headers, message body, article text, or chat log here…" onclick="event.stopPropagation(); activateCard('email')"></textarea>
+      </div>
+
+      <!-- SOCIAL MEDIA -->
+      <div class="card card-social" id="card-social" onclick="activateCard('social')">
+        <span class="card-icon">🌐</span>
+        <div class="card-title">Social Media Profile / URL</div>
+        <div class="card-desc">Check domain age, VirusTotal reputation, reverse image search, and impersonation signals.</div>
+        <input type="url" id="url-social" placeholder="https://x.com/username or https://suspicious-site.com" onclick="event.stopPropagation(); activateCard('social')" />
+        <input type="text" id="imgurl-social" placeholder="Profile photo URL (optional, for reverse image search)" style="margin-top:8px;" onclick="event.stopPropagation();" />
+      </div>
+
+    </div><!-- /cards-grid -->
+
+    <!-- Context -->
+    <div class="context-row">
+      <label>💬 Context &amp; Source <span style="color:var(--muted)">(Where did this come from? What does it claim to be?)</span></label>
+      <textarea id="context-input" placeholder="e.g. "Received via WhatsApp from unknown number claiming to be my bank" or "Viral image on X claiming to show a politician"…"></textarea>
+    </div>
+
+    <!-- Analyze Button -->
+    <button class="analyze-btn" id="analyze-btn" onclick="analyze()">
+      <div class="spinner" id="spinner"></div>
+      <span id="btn-text">🔬 Run Forensic Analysis</span>
+    </button>
+
+  </div><!-- /left -->
+
+  <!-- Right: Results -->
+  <div class="results-panel" id="results-panel">
+    <p class="section-title">📊 Analysis Report</p>
+    <div class="result-placeholder" id="placeholder">
+      <span class="ph-icon">🛡️</span>
+      <p>Select a media type, upload or paste your content, then click <strong>Run Forensic Analysis</strong>.<br/><br/>Results will appear here in real time.</p>
+    </div>
+    <div id="result-output" style="display:none;"></div>
+  </div>
+
+</div><!-- /layout -->
+
+<script>
+  const API = window.location.origin;
+  let activeCard = null;
+
+  // ── Card Activation ───────────────────────────────────────────────────────
+  function activateCard(id) {
+    if (activeCard) document.getElementById('card-' + activeCard).classList.remove('active');
+    activeCard = id;
+    document.getElementById('card-' + id).classList.add('active');
+  }
+
+  // ── Drag & Drop ───────────────────────────────────────────────────────────
+  function onDrag(e, id) {
+    e.preventDefault();
+    document.getElementById('dz-' + id).classList.add('drag-over');
+    activateCard(id);
+  }
+  function offDrag(id) {
+    document.getElementById('dz-' + id).classList.remove('drag-over');
+  }
+  function onDrop(e, id) {
+    e.preventDefault();
+    offDrag(id);
+    const dt = e.dataTransfer;
+    if (dt.files.length) {
+      document.getElementById('file-' + id).files = dt.files;
+      showFileName(id, dt.files[0].name);
+    }
+  }
+  function onFile(id) {
+    const f = document.getElementById('file-' + id).files[0];
+    if (f) showFileName(id, f.name);
+    activateCard(id);
+  }
+  function showFileName(id, name) {
+    document.getElementById('name-' + id).textContent = '📎 ' + name;
+  }
+
+  // ── Analyze ───────────────────────────────────────────────────────────────
+  async function analyze() {
+    if (!activeCard) {
+      alert('Please select a media type and provide content first.');
+      return;
+    }
+
+    setLoading(true);
+    showPlaceholder(false);
+
+    const formData = new FormData();
+    const context  = document.getElementById('context-input').value.trim();
+    if (context) formData.append('context', context);
+    formData.append('output_format', 'json');
+
+    // Gather input based on active card
+    if (['img','vid','aud','doc'].includes(activeCard)) {
+      const fileInput = document.getElementById('file-' + activeCard);
+      if (!fileInput.files.length) {
+        alert('Please upload a file first.');
+        setLoading(false);
+        return;
+      }
+      formData.append('file', fileInput.files[0]);
+    } else if (activeCard === 'email') {
+      const txt = document.getElementById('text-email').value.trim();
+      if (!txt) { alert('Please paste some text or email content first.'); setLoading(false); return; }
+      formData.append('text', txt);
+    } else if (activeCard === 'social') {
+      const url    = document.getElementById('url-social').value.trim();
+      const imgUrl = document.getElementById('imgurl-social').value.trim();
+      if (!url) { alert('Please enter a URL first.'); setLoading(false); return; }
+      formData.append('url', url);
+      if (imgUrl) formData.append('profile_image_url', imgUrl);
+    }
+
+    try {
+      const res = await fetch(`${API}/analyze`, { method: 'POST', body: formData });
+      if (!res.ok) {
+        const err = await res.json();
+        renderError(err.detail || `Server error ${res.status}`);
+        return;
+      }
+      const data = await res.json();
+      renderResult(data);
+    } catch(e) {
+      renderError('Could not reach the API at ' + API + '. Make sure the server is running.\n\n' + e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // ── Render Result ─────────────────────────────────────────────────────────
+  function renderResult(data) {
+    const v = data.verdict;
+    const score = Math.round((v.composite_score || 0) * 100);
+
+    // Score bar color
+    let barColor = '#22c55e';
+    if (score < 40) barColor = '#ef4444';
+    else if (score < 65) barColor = '#eab308';
+
+    // Confidence badge class
+    const confClass = {
+      'High': 'conf-high',
+      'Moderate': 'conf-moderate',
+      'Low': 'conf-low',
+      'Indeterminate': 'conf-indet'
+    }[v.confidence] || 'conf-indet';
+
+    // Evidence rows
+    const evidenceHTML = (data.evidence || []).map(e => {
+      const cls = e.strength.toLowerCase();
+      return `
+        <div class="evidence-row ${cls}">
+          <div class="ev-clue">${esc(e.clue)}</div>
+          <div style="font-size:0.76rem;color:var(--text);margin-top:3px;line-height:1.4;">${esc(e.suggests)}</div>
+          <div class="ev-meta">
+            <span class="ev-tag">📍 ${esc(e.source)}</span>
+            <span class="ev-tag">💡 ${esc(e.innocent_alternative).slice(0,60)}${e.innocent_alternative.length>60?'…':''}</span>
+            <span class="ev-tag">${strengthIcon(e.strength)} ${esc(e.strength)}</span>
+          </div>
+        </div>`;
+    }).join('') || '<p style="color:var(--muted);font-size:0.78rem;">No evidence rows collected.</p>';
+
+    // Checks
+    const doneHTML = (data.checks_performed || []).map(c =>
+      `<div class="check-item done"><span class="check-dot">✅</span><span>${esc(c)}</span></div>`
+    ).join('');
+    const skipHTML = (data.checks_skipped || []).map(c =>
+      `<div class="check-item"><span class="check-dot">⏭️</span><span>${esc(c)}</span></div>`
+    ).join('');
+
+    document.getElementById('result-output').innerHTML = `
+      <div class="verdict-card">
+        <!-- Verdict header -->
+        <div class="verdict-header">
+          <div class="verdict-label">${esc(v.label)}</div>
+          <div class="confidence-pill ${confClass}">Confidence: ${esc(v.confidence)}</div>
+          <div class="bottom-line">${esc(v.bottom_line)}</div>
+          <div class="limitation">⚠️ <span>${esc(v.biggest_limitation)}</span></div>
+        </div>
+
+        <!-- Score bar -->
+        <div class="score-bar-wrap">
+          <div class="score-bar-label">
+            <span>Authenticity Score</span>
+            <strong>${score} / 100</strong>
+          </div>
+          <div class="score-bar">
+            <div class="score-fill" style="width:${score}%;background:${barColor};"></div>
+          </div>
+          <div style="font-size:0.7rem;color:var(--muted);margin-top:6px;">${v.signal_count} forensic check(s) completed</div>
+        </div>
+
+        <!-- Evidence -->
+        <div class="evidence-section">
+          <h3>🔬 Evidence Breakdown</h3>
+          ${evidenceHTML}
+        </div>
+
+        <!-- Risk -->
+        <div class="risk-box">
+          <h4>⚠️ Potential Risks</h4>
+          ${esc(data.potential_risks)}
+        </div>
+
+        <!-- Verify -->
+        <div class="verify-box">
+          <h4>✅ How to Get 100% Proof</h4>
+          ${esc(data.how_to_verify)}
+        </div>
+
+        <!-- Checks -->
+        <div class="checks-section">
+          <h3>✅ Checks Performed</h3>
+          ${doneHTML || '<p style="color:var(--muted);font-size:0.76rem;">None completed.</p>'}
+          <h3 style="margin-top:14px;">⏭️ Skipped / Unavailable</h3>
+          ${skipHTML || '<p style="color:var(--muted);font-size:0.76rem;">None skipped.</p>'}
+        </div>
+      </div>`;
+
+    document.getElementById('result-output').style.display = 'block';
+    document.getElementById('results-panel').scrollTop = 0;
+  }
+
+  function renderError(msg) {
+    document.getElementById('result-output').innerHTML =
+      `<div class="error-banner">❌ <strong>Error:</strong><br/><br/>${esc(msg)}</div>`;
+    document.getElementById('result-output').style.display = 'block';
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  function showPlaceholder(show) {
+    document.getElementById('placeholder').style.display = show ? 'block' : 'none';
+    document.getElementById('result-output').style.display = show ? 'none' : 'block';
+  }
+
+  function setLoading(on) {
+    document.getElementById('spinner').style.display = on ? 'block' : 'none';
+    document.getElementById('btn-text').textContent = on ? 'Analyzing…' : '🔬 Run Forensic Analysis';
+    document.getElementById('analyze-btn').disabled = on;
+  }
+
+  function esc(str) {
+    return String(str || '')
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/\n/g,'<br/>');
+  }
+
+  function strengthIcon(s) {
+    return s === 'Strong' ? '🔴' : s === 'Moderate' ? '🟡' : '⚪';
+  }
+</script>
+</body>
+</html>
